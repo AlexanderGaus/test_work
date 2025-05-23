@@ -1,0 +1,20 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Inter, sans-serif;
+    min-inline-size: 360px;
+    overflow-x: hidden;
+    margin: 0;
+}
+
+h1, h2, h3 {
+  margin: 0;
+}
+
+ul, button {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
