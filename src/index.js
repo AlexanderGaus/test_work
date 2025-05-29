@@ -36,85 +36,122 @@ isLike.forEach(likes => {
 
 // slider 
 
-const card_first = document.querySelector('.card_type-fourth');
-const card_second = document.querySelector('.card_type-fifth');
-const indicators = document.querySelectorAll('.indicator__slider');
-let isCard1Active = true;
+let cards = Array.from(document.querySelectorAll('.card__slider'));
+let indicators = [];
+let currentIndex = 0;
 let startX = 0;
-let currentX = 0;
-let diffX = 0;
+let isMobile = false;
 
+function showCard(index) {
+  cards.forEach((card, i) => {
+    const offset = (i - index) * 110;
+    card.style.transform = `translateX(${offset}%)`;
+  });
 
-function toggleCards() {
-    if (isCard1Active) {
-        card_first.style.transform = 'translateX(-110%)';
-        card_second.style.transform = 'translateX(0%)';
-    } else {
-        card_first.style.transform = 'translateX(0%)';
-        card_second.style.transform = 'translateX(110%)';
-    }
-    isCard1Active = !isCard1Active;
+  updateIndicator(index);
+  currentIndex = index;
 }
 
-function toggleCardsStart() {
-    card_first.style.transform = 'translateX(0%)';
-    card_second.style.transform = 'translateX(0%)';
+function resetCardsPosition() {
+  cards.forEach(card => {
+    card.style.transform = 'translateX(0%)';
+  });
+  currentIndex = 0;
 }
 
-function updateIndicator() {
-    indicators.forEach((indicator, index) => {
-        indicator.classList.add('indicator_open');
-        if (index === (isCard1Active ? 0 : 1)) {
-            indicator.classList.add('active');
-        } else {
-            indicator.classList.remove('active');
-        }
-    });
+function updateIndicator(index = currentIndex) {
+  indicators.forEach((indicator, i) => {
+    indicator.classList.toggle('indicator_open', isMobile);
+    indicator.classList.toggle('active', i === index);
+  });
 }
 
 function handleTouchStart(e) {
-    startX = e.touches[0].clientX;
+  startX = e.touches[0].clientX;
 }
 
 function handleTouchMove(e) {
-    currentX = e.touches[0].clientX;
-    diffX = startX - currentX;
+  const currentX = e.touches[0].clientX;
+  const diffX = startX - currentX;
 
-    if (Math.abs(diffX) > 50) {
+  if (Math.abs(diffX) > 50) {
+    const isSwipingLeft = diffX > 0;
+    const isSwipingRight = diffX < 0;
+
+    if ((isSwipingLeft && currentIndex < cards.length - 1) ||
+        (isSwipingRight && currentIndex > 0)) {
+      if (e.cancelable) {
         e.preventDefault();
-        toggleCards();
-        updateIndicator();
-        startX = currentX;
+      }
+
+      const newIndex = isSwipingLeft ? currentIndex + 1 : currentIndex - 1;
+      showCard(newIndex);
     }
+
+    startX = currentX;
+  }
 }
 
-card_first.addEventListener('touchstart', handleTouchStart, { passive: false });
-card_first.addEventListener('touchmove', handleTouchMove, { passive: false });
-card_second.addEventListener('touchstart', handleTouchStart, { passive: false });
-card_second.addEventListener('touchmove', handleTouchMove, { passive: false });
-
-
-const swapResize = () => {
-    if (window.innerWidth <= 1024) {
-
-        indicators.forEach(indicator => {
-            indicator.addEventListener('click', () => {
-                indicator.classList.add('indicator_open');
-                const slideIndex = indicator.dataset.slide - 1;
-                if (slideIndex !== (isCard1Active ? 0 : 1)) {
-                    toggleCards();
-                    updateIndicator();
-                }
-            });
-    });
-
-    } else {
-        indicators.forEach(indicator => {
-            indicator.classList.remove('indicator_open')
-        })
-        toggleCardsStart()
-    }
+function updateIndicatorsList() {
+  indicators = Array.from(document.querySelectorAll('.indicator__slider'));
 }
 
-window.addEventListener('resize', swapResize) 
+function clearIndicatorHandlers() {
+  const currentIndicators = document.querySelectorAll('.indicator__slider');
+  currentIndicators.forEach((indicator) => {
+    if (indicator.parentNode) {
+      const clone = indicator.cloneNode(true);
+      indicator.parentNode.replaceChild(clone, indicator);
+    }
+  });
+}
+
+function addTouchHandlers() {
+  cards.forEach(card => {
+    card.addEventListener('touchstart', handleTouchStart, { passive: false });
+    card.addEventListener('touchmove', handleTouchMove, { passive: false });
+  });
+}
+
+function removeTouchHandlers() {
+  cards.forEach(card => {
+    card.removeEventListener('touchstart', handleTouchStart, { passive: false });
+    card.removeEventListener('touchmove', handleTouchMove, { passive: false });
+  });
+}
+
+function setupMobile() {
+  isMobile = true;
+  cards = Array.from(document.querySelectorAll('.card__slider'));
+  clearIndicatorHandlers();
+  updateIndicatorsList();
+
+  indicators.forEach((indicator, index) => {
+    indicator.addEventListener('click', () => showCard(index));
+  });
+
+  addTouchHandlers();
+  showCard(currentIndex);
+}
+
+function teardownDesktop() {
+  isMobile = false;
+  resetCardsPosition();
+  updateIndicator();
+  removeTouchHandlers();
+}
+
+function handleResponsiveInit() {
+
+  if (window.innerWidth < 1024 && !isMobile) {
+    setupMobile();
+  } else if (window.innerWidth >= 1024 && isMobile) {
+    teardownDesktop();
+  }
+}
+
+window.addEventListener('resize', handleResponsiveInit);
+document.addEventListener('DOMContentLoaded', () => {
+  handleResponsiveInit();
+});
 
